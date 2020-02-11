@@ -1,80 +1,73 @@
 
-    <header><meta charset="utf-8">
-    <title>Ginkgo Terminal</title>
-    <meta name="author" content="GooberFromHell">
-    <meta name="description" content="Ginkgo Term">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<main>
+    <div id='nav'>
+        <div id='checkboxes'>
+            <div id='cl-checkbox' uk-tooltip="Check for closing partners for all brackets, paraenes, quotes, and back ticks (`). Prints what is missing, if any are found. Will not trip-up on escaped characters.">
+                <input id="closings" class='uk-checkbox-muted' type="checkbox" name="closings">
+                <label id="cl-lb" for="closings">Closeings</label>
+            </div>
+            <div id='nl-checkbox' uk-tooltip='Submit command to VM rather than just paste to VM.'>
+                <input id="nl" class='uk-checkbox-muted' type="checkbox" name="nl" checked>
+                <label id="nl-lb" for="nl">Submit on Enter</label>
+            </div>
+        </div>
+        <a>
+            <div class='btn-container' uk-tooltip="title: Send Ctrl + Alt + Del to the VM.; pos: bottom">
+                <button id='cad' class="icon-btn tip-cad"><i class='far fa-keyboard '></i></button>
+            </div>
+        </a>
+        <a>
+            <div class='btn-container' uk-tooltip="Upload file. If 'New line' is enabled, each line is read as a seperate command. If NOT, then it attempts to paste in the entire file, without submitting it to the VM. (Experimental)">
+                <button id='upload' class="icon-btn">
+                    <i class="fa fa-file-upload"></i>
+                </button>
 
-    <!-- JS Lib CSS -->
+            </div>
+        </a>
+    </div>
+    <div id='term'>
+        <div class='cmd' id='stderr'></div>
+        <div class='terminal cmd' id='stdin'></div>
+    </div>
+</main>
+<div id="upload-overlay" class="uk-overlay-primary uk-position-cover" style="display:none;margin:0px;color: rgba(211, 211, 211, 0.514);" ;>
+    <div class="js-upload uk-placeholder uk-text-center uk-position-top" style="color:inherit;margin:60px 250px 25px 250px;border:1px dashed rgba(211, 211, 211, 0.514);background-color:rgba(211, 211, 211, 0.233); padding: 5px;">
+        <svg class='backdrop' xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <path d="M17.812 23c-7.812 0-7.812-8-7.812-8h-3l4.979-4 5.021 4h-3s-.812 6.094 3.812 8zm1.667-14.908c-.212-3.951-3.473-7.092-7.479-7.092s-7.267 3.141-7.479 7.092c-2.57.463-4.521 2.706-4.521 5.408 0 3.037 2.463 5.5 5.5 5.5h3.302c-.275-.717-.46-1.404-.578-2h-2.724c-1.93 0-3.5-1.57-3.5-3.5 0-2.797 2.479-3.833 4.433-3.72-.167-4.218 2.208-6.78 5.567-6.78 3.453 0 5.891 2.797 5.567 6.78 1.745-.046 4.433.751 4.433 3.72 0 1.93-1.57 3.5-3.5 3.5h-2.518c.062.62.21 1.329.499 2h2.019c3.037 0 5.5-2.463 5.5-5.5 0-2.702-1.951-4.945-4.521-5.408z" /></svg>
+        <div>
+            <span class="uk-text-middle">Drag file here or</span>
+            <div uk-form-custom>
+                <input type="file" multiple />
+                <span class="uk-link">Select one</span>
+            </div>
+        </div>
+
+    </div>
+    <button class='uk-background-sesecondary' type='button' id='close-over'>Close</button>
+</div>
+
+<footer>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/2.12.0/css/jquery.terminal.css" />
     <link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.3.1/css/uikit.min.css" />
     <link rel="stylesheet" href="https://raw.githubusercontent.com/GooberFromHell/term/master/term.css">
-    <link rel="icon" type="image/x-icon" href="" /></header>
-    <main>
-        <div id='nav'>
-            <div id='checkboxes'>
-                <div id='cl-checkbox' uk-tooltip="Check for closing partners for all brackets, paraenes, quotes, and back ticks (`). Prints what is missing, if any are found. Will not trip-up on escaped characters.">
-                    <input id="closings" class='uk-checkbox-muted' type="checkbox" name="closings">
-                    <label id="cl-lb" for="closings">Closeings</label>
-                </div>
-                <div id='nl-checkbox' uk-tooltip='Submit command to VM rather than just paste to VM.'>
-                    <input id="nl" class='uk-checkbox-muted' type="checkbox" name="nl" checked>
-                    <label id="nl-lb" for="nl">Submit on Enter</label>
-                </div>
-            </div>
-            <a>
-                <div class='btn-container' uk-tooltip="title: Send Ctrl + Alt + Del to the VM.; pos: bottom">
-                    <button id='cad' class="icon-btn tip-cad"><i class='far fa-keyboard '></i></button>
-                </div>
-            </a>
-            <a>
-                <div class='btn-container' uk-tooltip="Upload file. If 'New line' is enabled, each line is read as a seperate command. If NOT, then it attempts to paste in the entire file, without submitting it to the VM. (Experimental)">
-                    <button id='upload' class="icon-btn">
-                        <i class="fa fa-file-upload"></i>
-                    </button>
+    <link rel="icon" type="image/x-icon" href="" />
 
-                </div>
-            </a>
-        </div>
-        <div id='term'>
-            <div class='cmd' id='stderr'></div>
-            <div class='terminal cmd' id='stdin'></div>
-        </div>
-    </main>
-    <div id="upload-overlay" class="uk-overlay-primary uk-position-cover" style="display:none;margin:0px;color: rgba(211, 211, 211, 0.514);" ;>
-        <div class="js-upload uk-placeholder uk-text-center uk-position-top" style="color:inherit;margin:60px 250px 25px 250px;border:1px dashed rgba(211, 211, 211, 0.514);background-color:rgba(211, 211, 211, 0.233); padding: 5px;">
-            <svg class='backdrop' xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                <path d="M17.812 23c-7.812 0-7.812-8-7.812-8h-3l4.979-4 5.021 4h-3s-.812 6.094 3.812 8zm1.667-14.908c-.212-3.951-3.473-7.092-7.479-7.092s-7.267 3.141-7.479 7.092c-2.57.463-4.521 2.706-4.521 5.408 0 3.037 2.463 5.5 5.5 5.5h3.302c-.275-.717-.46-1.404-.578-2h-2.724c-1.93 0-3.5-1.57-3.5-3.5 0-2.797 2.479-3.833 4.433-3.72-.167-4.218 2.208-6.78 5.567-6.78 3.453 0 5.891 2.797 5.567 6.78 1.745-.046 4.433.751 4.433 3.72 0 1.93-1.57 3.5-3.5 3.5h-2.518c.062.62.21 1.329.499 2h2.019c3.037 0 5.5-2.463 5.5-5.5 0-2.702-1.951-4.945-4.521-5.408z" /></svg>
-            <div>
-                <span class="uk-text-middle">Drag file here or</span>
-                <div uk-form-custom>
-                    <input type="file" multiple />
-                    <span class="uk-link">Select one</span>
-                </div>
-            </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
 
-        </div>
-        <button class='uk-background-sesecondary' type='button' id='close-over'>Close</button>
-    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/2.12.0/js/jquery.terminal.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/js/all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.3.1/js/uikit.min.js"></script>
 
-    <footer>
+    <script type="text/javascript" src="https://raw.githubusercontent.com/GooberFromHell/term/master/term.js"></script>
+    <script type="text/javascript">
+        $(function() {
+            $('.tip-cad').tooltip();
+            $('.tip-up').tooltip();
+        })
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
-
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/2.12.0/js/jquery.terminal.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/js/all.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/uikit/3.3.1/js/uikit.min.js"></script>
-
-        <script type="text/javascript" src="https://raw.githubusercontent.com/GooberFromHell/term/master/term.js"></script>
-        <script type="text/javascript">
-            $(function() {
-                $('.tip-cad').tooltip();
-                $('.tip-up').tooltip();
-            })
-
-        </script>
-    </footer>
+    </script>
+</footer>
 

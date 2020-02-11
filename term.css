@@ -1,0 +1,152 @@
+* {
+    font-family: monospace;
+    font-size: 10px;
+    color:gainsboro;
+}
+
+body {
+    background-color: #222;
+    height: 98vh;
+    width: 100vw;
+    margin: 0px;
+}
+
+#nav {
+    display: block;
+    position: relative;
+    height: auto;
+    width: 99vw;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 10px;
+    border: 1px inset rgba(114, 114, 114, 0.539);
+}
+
+#term {
+    display: inline;
+    height: 94vh;
+    width: 100vw;
+    margin: 0px;
+}
+
+#stdin {
+    display: block;
+    height: 91vh;
+    width: 100%%;
+    padding: 5px 10px 5px 10px;
+}
+
+.icon-btn {
+    display: table-cell;
+    background-color: transparent;
+    border: 1px inset rgba(104, 104, 104, 0.839);
+    border-radius: 10%;
+    color: gainsboro;
+    height: 25px;
+    width: 25px;
+    padding: 3px;
+    margin: 0px;
+    position: relative;
+    overflow: hidden;
+    font-size: 16px;
+}
+
+#nl-lb {
+    color: gainsboro;
+}
+
+#upload-overlay {
+    display: none;
+}
+
+#close-over {
+    border: 1px solid black;
+    color: black;
+    font-weight:bolder;
+    border-radius: 25px;
+    background-color: gainsboro;
+    float: right;
+    margin-right: 5px;
+    margin-top: 5px;
+    background: red;
+}
+
+.btn-container {
+    display: inline-block;
+    background: none;
+    border: none;
+    color: gainsboro;
+    background-color: black;
+    padding: 0px;
+    margin: 0px 5px 0px 5px;
+    position: relative;
+    bottom: 4px;
+}
+
+html {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+
+
+#nl-checkbox {
+    vertical-align: middle;
+    display: block;
+}
+
+.terminal-scroll-marker {
+    display: none;
+}
+
+.terminal-output {
+    display: none;
+}
+
+.fontawesome-i2svg-active.fontawesome-i2svg-complete {
+    height:25%;
+    top: 0px;
+    background-color: #222;
+}
+
+#stderr {
+    display:block;
+    padding: 5px;
+}
+
+#checkboxes {
+    width:125px;
+    height:100%;
+    display:inline-block;
+    position: relative;
+    top:2px
+}
+
+
+
+.backdrop {
+    z-index: 1;
+    position: relative;
+    display: block;
+    height:85px;
+    width:85px;
+    left: 40%;
+    top: 18px;
+    opacity: .5;
+    background-color: #222;
+    border-radius: 50%;
+    padding: 7px;
+    box-shadow: inset -1px -1px 2px 2px black;
+}
+
+
+
+.over-grid {
+    z-index: 2;
+    position: relative;
+    top: -50px;
+    display:block;
+    font-weight: bolder;
+    font-size: 18px;
+}

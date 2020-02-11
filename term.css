@@ -149,3 +149,7 @@ html {
     display:block;
     font-weight: bolder;
 }
+
+label {
+font-size: 10px;
+}

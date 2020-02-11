@@ -152,4 +152,5 @@ html {
 
 label {
 font-size: 10px;
+display: inline-block;
 }

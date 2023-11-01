@@ -1,11 +1,14 @@
 // ==UserScript==
 // @name         PCTE Term 4.0
+// @version      4.1
+// @updateURL    https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
 // @author       @LordGoober
 // @match        https://rcs00-portal.pcte.mil/
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/2.37.2/js/jquery.terminal.js
 // @resource     jqterminal_css https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/2.37.2/css/jquery.terminal.css
 // @resource     fontawesome_css https://raw.githubusercontent.com/bryfry/chronos_trigger/master/font-awesome.css
+// @resource     hack_font https://raw.githubusercontent.com/GooberFromHell/term/master/hack.css
 // @grant        GM_addStyle
 // @grant        GM_getResourceText
 // @grant        GM_setValue
@@ -24,7 +27,6 @@ body {
     width: 100%;
     background-color: rgb(19, 19, 19);
     color: rgb(211, 211, 211);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     overflow-y: hidden;
 }
 
@@ -34,9 +36,18 @@ label {
 }
 
 #rework-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
     display: flex;
     flex-direction: column;
     height: 100%;
+}
+
+#rework-container > * {
+    font-family: Hack, "Segoe UI" !important;
 }
 
 #terminal {
@@ -54,6 +65,7 @@ label {
     justify-content: space-between;
     padding-left: 5px;
     padding-right: 5px;
+    padding-top: 2px;
 }
 
 #term {
@@ -118,7 +130,8 @@ label {
 
 .terminal-wrapper {
     position: relative;
-    height: 100%;
+    flex-grow: 1;
+    bottom: 0;
     padding-bottom: 10px;
 }
 
@@ -132,7 +145,6 @@ label {
 
 .icon-btn > i {
     color: #1e87f0 !important;
-    padding: 5px;
     font-size: 16px;
 }
 
@@ -143,8 +155,8 @@ label {
     justify-content: center;
     background-color: transparent;
     border: none;
-    height: 32px;
-    width: 32px;
+    height: 26px;
+    width: 26px;
     transition: all 0.2s ease-in-out;
 }
 
@@ -212,17 +224,17 @@ display: none !important;
 
 .d-grid {
 display: grid !important;
+
 `
 
 const html = `
- <div id="rework-container">
-
+<div id="rework-container">
 <div id="divider"></div>
 <div id=terminal>
-    <span id='vmTitle' class='uk-text-middle'>${window.name.split(':')[0]}</span>
     <div id="nav">
         <div id='checkboxes'>
         </div>
+        <span id='vmTitle'>${window.location.href.split('vmName=')[1]}</span>
         <div id="action-btns">
         </div>
     </div>
@@ -285,17 +297,16 @@ function init() {
                 },
             },
         }
-        terminalCommands = {
-            commands: function (command) {
-                scroll_to_bottom()
-            },
+        terminalCommands = function (command) {
+            let height = $('.terminal-scroller').height()
+            this.height(height)
+            this.scroll_to_bottom()
+            return null
         }
         terminalOptions = {
             ...this.terminalKeymap,
-            ...this.commands,
             ...this.terminalEvents,
             height: $('#stdin').height(),
-            scrollOnEcho: true,
             greetings: false,
             prompt: this.terminalPrompts.default,
         }
@@ -366,13 +377,14 @@ function init() {
                 tooltip: "When the Window is moves the VM console will stretch to fill the availible space. Will cause distortion on VMs with smaller console Windows.",
                 action: (e) => {
                     this.toggles.rescale = e.target.checked
+                    this.actions.rescale(this.toggles.rescale)
                 }
             },
         }
         toggles = {
             closings: false,
             newline: true,
-            rescale: true,
+            rescale: false,
         }
         elementEvents = {
             droparea: {
@@ -419,35 +431,56 @@ function init() {
             fullscreen: (wmks) => {
                 wmks.isFullScreen() ? wmks.exitFullScreen() : wmks.enterFullScreen()
             },
+            revertConsole: (wmks) => {
+                wmks.setOption('rescale', false)
+                wmks.setOption('changeResolution', false)
+                wmks.setOption('useUnicodeKeyboardInput', true)
+                $('#mainCanvas').css('margin', '0 auto')
+            },
+            rescale: (wmks, value) => {
+                wmks.setOption('rescale', value)
+                wmks.setOption('changeResolution', value)
+                wmks.setOption('useUnicodeKeyboardInput', true)
+                this.actions.resizeConsole()
+            },
             initConsole: (wmks) => {
-                wmks.setOption('rescale', true);
-                wmks.setOption('changeResolution', true);
-                wmks.updateScreen()
+                return
             },
             resizeConsole: (wmks) => {
-                let terminalHeight = $('#terminal').height()
-                let dividerHeight = $('#divider').height()
-                let vmwareHeight = $('#vmware-interface').height()
-                let newHeight = vmwareHeight - (terminalHeight + dividerHeight)
-                $('#vmware-interface').height(newHeight)
-                wmks.updateScreen()
+                if (this.toggles.rescale) {
+                    function getMargin() {
+                        // get scale factor with regex, becasue jquery dosen't support 'scale' css property
+                        let scaleFactor = parseFloat($('#mainCanvas').css('transform').match(/matrix\((-?\d*\.?\d+),\s*0,\s*0,\s*(-?\d*\.?\d+),\s*0,\s*0\)/)[1])
+                        let mainCanvasWidth = $('#mainCanvas').width() * scaleFactor
+                        let screenWidth = $('#vmware-interface').width()
+                        return ((screenWidth - mainCanvasWidth) / 2)
+                    }
+                    $('#mainCanvas').css('margin-left', getMargin)
+                    $('#mainCanvas').css('margin-right', getMargin)
+                } else {
+                    $('#mainCanvas').css('margin', '0 auto')
+                }
             },
-            revertConsole: (wmks) => {
-                $('#vmware-interface').height('100%')
-                $('#mainCanvas').height('100%')
-                wmks.updateScreen()
-            }
+            register(wmks, event, callback) {
+                wmks.register(event, callback)
+            },
         }
 
         constructor() {
             this.actions = new Proxy(this, {
                 get: function (target, prop, receiver) {
+                    console.log(`Prop called: ${prop} by line ${new Error().stack.split('\n')[2]}`)
                     if (prop in target.actionHandlers) {
-                        let wmks = WMKS.createWMKS("vmware-interface", {})
+                        let wmks = WMKS.createWMKS("vmware-interface", {
+                            useUnicodeKeyboardinput: true,
+                            rescale: target.toggles.rescale,
+                            changeResolution: target.toggles.rescale,
+                        })
                         return target.actionHandlers[`${prop}`].bind(target, wmks)
                     } else {
-                        return target[`${prop}`].bind
+                        return target[`${prop}`].bind(this)
                     }
+
                 }
             })
 
@@ -464,27 +497,30 @@ function init() {
             this.initCheckboxes()
             this.initTooltips()
             this.initEvents()
+            this.actions.initConsole()
 
             this.terminalOptions.keymap.ENTER = this.terminalOptions.keymap.ENTER.bind(this)
             this.terminalOptions.keymap["CTRL+C"] = this.terminalOptions.keymap["CTRL+C"].bind(this)
-            let terminal = $('#stdin').terminal((command) => console.log(command), {
+            let terminal = $('#stdin').terminal((command) => this.terminalCommands, {
                 ...this.terminalOptions
             })
             this.terminal = terminal
-            this.actions.initConsole()
-            this.actions.resizeConsole()
+            this._showNewInterface()
+
         }
 
         initStyle() {
             let jqterminal_css = GM_getResourceText('jqterminal_css')
             let fontawesome_css = GM_getResourceText('fontawesome_css')
+            let hack_font = GM_getResourceText('hack_font')
             GM_addStyle(jqterminal_css)
             GM_addStyle(fontawesome_css)
+            GM_addStyle(hack_font)
             GM_addStyle(style)
         }
         initHtml() {
             $(document.body).append(html)
-            this._showNewInterface()
+
         }
         initButtons() {
             for (let [key, value] of Object.entries(this.actionButtons)) {
@@ -502,22 +538,20 @@ function init() {
         initEvents() {
             function mouseUp(event) {
                 this.direction = 'Released'
-                $('body').unbind('mouseup')
-                $('body').unbind('mousemove')
+                $('body').off('mouseup')
+                $('body').off('mousemove')
             }
             mouseUp = mouseUp.bind(this)
 
             function mouseMove(event) {
-                this._setDivPosition()
+                this._setDivPosition(event)
             }
 
             mouseMove = mouseMove.bind(this)
 
             function mouseDown(event) {
-                $('body').mouseup(mouseUp)
-                $('body').mousemove(mouseMove)
-
-                this._getDivPosition()
+                $('body').on('mouseup', mouseUp)
+                $('body').on('mousemove', mouseMove)
             }
 
             $('#divider').mousedown(mouseDown.bind(this))
@@ -571,7 +605,6 @@ function init() {
 
             $('#close-over').click(this.toggleUploadOverlay)
 
-
         }
         initTooltips(arg) {
             function makeTooltip(element) {
@@ -581,7 +614,7 @@ function init() {
                 $(tooltip).css('max-width', 250)
 
                 // calulate top position of tooltip
-                let top = -($(tooltip).height() + $(element).height() - 10)
+                let top = -($(tooltip).height() + $(element).height())
 
                 // calculate left position of tooltip but make sure it doesn't go off the screen
                 let left = -($(tooltip).width() / 2) + 10
@@ -589,23 +622,6 @@ function init() {
                 // apply the css styles
                 $(tooltip).css('top', top)
                 $(tooltip).css('left', left)
-
-                // create the arrow for the tooltip
-                let arrow = $('<div class="arrow-bottom"></div>')
-
-                // add style to make it look like an arrow
-                $(arrow).css('border-color', 'rgb(32, 32, 32) transparent transparent transparent')
-                $(arrow).css('border-width', '5px')
-                $(arrow).css('border-style', 'solid')
-                $(tooltip).append(arrow)
-
-                // calculate the left position of the arrow
-                let arrowLeft = ($(tooltip).width() / 2) + 5
-                $(arrow).css('left', arrowLeft)
-
-                // calculate the top position of the arrow
-                let arrowTop = ($(tooltip).height() + 10)
-                $(arrow).css('top', arrowTop)
 
                 // Account for padding on the tooltip
                 let padding = parseFloat($(tooltip).css('padding')) * 2
@@ -615,12 +631,11 @@ function init() {
                 if (rightMost > $(window).width()) {
                     let leftOffset = (rightMost + padding) - $(window).width()
                     $(tooltip).css('left', left - leftOffset)
-
-                    // get leftOffset ammount as percentage of tooltip width
-                    let leftOffsetPercent = (leftOffset / $(tooltip).width()) * 100
-
-                    // apply new left offset to the arrow
-                    $(arrow).css('left', `${50 + leftOffsetPercent}%`)
+                }
+                let leftMost = $(tooltip).offset().left
+                if (leftMost < 0) {
+                    let leftOffset = leftMost * -1
+                    $(tooltip).css('left', left + leftOffset)
                 }
             }
             if (!arg) {
@@ -639,11 +654,6 @@ function init() {
         toggleInterface() {
             let toggle = $("#content-wrapper").hasClass("d-none")
             toggle ? this._showOldInterface() : this._showNewInterface()
-            resizeView()
-        }
-        resizeView() {
-            $('#vmware-interface').height($('#vmware-interface').height() - ($('#terminal').height() + $('#divider').height()))
-            $('#mainCanvas').height($('#vmware-interface').height())
         }
         _showOldInterface() {
             // hide old container
@@ -669,6 +679,8 @@ function init() {
             // move vmware console to new interface before the divider
             $('#vmware-interface').insertBefore('#divider')
 
+            $('div[class*=VirtualMachinesAutocomplete___StyledAutocomplete-').insertAfter('#vmTitle')
+
             // remove button to revert back to new interface in the top right corner
             $('#new-button').remove()
 
@@ -686,6 +698,12 @@ function init() {
         }
         _createCheckbox({ id, tooltip, icon, action, checked }) {
             let checkbox = $(`<div id="${id}-checkbox" data-tooltip="${tooltip}"></div>`)
+            checkbox.css({
+                'display': 'flex',
+                'align-items': 'center',
+                'justify-content': 'center',
+                'gap': '5px',
+            })
             let input = $(`<input id="${id}" type="checkbox" name="${id}">`)
             let label = $(`<label id="${id}-checkbox-label" for="${id}">${id.charAt(0).toUpperCase() + id.slice(1)}</label>`)
             checkbox.append(input)
@@ -696,39 +714,21 @@ function init() {
 
             return checkbox
         }
-        _getDivPosition(mouse) {
-            this.direction = 'Pressed'
-            this.currentPosition = event.pageY
-            this.topTempHeight = $('#vmware-interface').css('height')
-            this.topHeightArray = this.topTempHeight.split('p')
-            this.topCurrentHeight = parseInt(this.topHeightArray[0])
-            this.bottomTempHeight = $('#terminal').css('height')
-            this.bottomHeightArray = this.bottomTempHeight.split('p')
-            this.bottomCurrentHeight = parseInt(this.bottomHeightArray[0])
-        }
         _setDivPosition(mouse) {
-            if (this.direction == 'Pressed') {
-                this.newPosition = event.pageY
-                var movePerPixels = parseInt(this.newPosition - this.currentPosition)
-                var topDivNewLocation = parseInt(this.topCurrentHeight + movePerPixels)
-                if (topDivNewLocation < 10) {
-                    $('#vmware-interface').css('height', '10px')
-                }
-                var bottomDivNewLocation = parseInt(this.bottomCurrentHeight - movePerPixels)
-                if (bottomDivNewLocation < this.terminalHeight) {
-                    $('#terminal').css('height', this.terminalHeight + 'px')
-                }
-                else {
-                    $('#vmware-interface').css('height', topDivNewLocation + 'px')
-                    $('#terminal').css('height', this.bottomDivNewLocation + 'px')
-                    $('.termina-wrapper').css('height', $('.terminal-scroller').height() + 'px')
-                }
-                let wmks = WMKS.createWMKS("vmware-interface", {
-                    rescale: true,
-                    changeResolution: $('#always-fullscreen:checked')
-                })
-                wmks.updateScreen()
+            let pageHeight = $(window).height()
+            let dividerHeight = $('#divider').height()
+            let newVmwareHeight = mouse.pageY
+            if (newVmwareHeight < 200) {
+                newVmwareHeight = 200
             }
+            let newTerminalHeight = pageHeight - dividerHeight - newVmwareHeight
+            if (newTerminalHeight < 200) {
+                newTerminalHeight = 200
+            }
+
+            $('#vmware-interface').height(newVmwareHeight)
+            $('#terminal').height()
+            this.actions.resizeConsole()
         }
         static balance(code) {
             var tokens = code
@@ -801,11 +801,11 @@ function wait() {
         setTimeout(() => {
             var ele = $('#mainCanvas')
             if (ele) {
-                setTimeout(() => init(), 1000)
+                setTimeout(() => init(), 1200)
             } else {
                 wait()
             }
-        }, 300)
+        }, 500)
     }
 }
 

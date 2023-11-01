@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         PCTE Term 4.0
-// @version      4.1
+// @version      4.1.1
 // @updateURL    https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
 // @downloadURL  https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
 // @author       @LordGoober

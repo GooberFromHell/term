@@ -204,7 +204,7 @@ a {
 #divider {
     width: 100%;
     cursor: row-resize;
-    height: 8px;
+    min-height: 8px;
     background-color: #404040;
 }
 

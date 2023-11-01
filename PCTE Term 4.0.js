@@ -680,8 +680,6 @@ function init() {
             // move vmware console to new interface before the divider
             $('#vmware-interface').insertBefore('#divider')
 
-            $('div[class*=VirtualMachinesAutocomplete___StyledAutocomplete-').insertAfter('#vmTitle')
-
             // remove button to revert back to new interface in the top right corner
             $('#new-button').remove()
 

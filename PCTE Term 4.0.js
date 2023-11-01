@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         PCTE Term 4.0
-// @version      4.1.1
+// @version      4.1.2
 // @updateURL    https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
 // @downloadURL  https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
 // @author       @LordGoober
@@ -45,14 +45,12 @@ label {
     display: flex;
     flex-direction: column;
     height: 100%;
-}
-
-#rework-container > * {
     font-family: Hack, "Segoe UI" !important;
 }
-
+#rework-container #vmware-interface {
+    height: 85%;
+}
 #terminal {
-    height: 15%;
     display: flex;
     flex-direction: column;
     position: relative;
@@ -175,7 +173,6 @@ a {
 }
 
 .tooltip .tooltiptext {
-    visibility: hidden;
     display: block;
     background-color: rgb(32, 32, 32);
     color: #fff;
@@ -188,18 +185,7 @@ a {
     z-index: 1;
 }
 
-.tooltip:hover .tooltiptext {
-    visibility: visible;
-}
 
-.tooltip .tooltiptext .arrow-bottom {
-    content: " ";
-    position: absolute;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: rgb(32, 32, 32) transparent transparent transparent;
-}
 
 #divider {
     width: 100%;
@@ -293,9 +279,6 @@ function init() {
                     this.actions.sendInputString(command)
                     original()
                 },
-                "CTRL+C": function (e, origional) {
-                    this.actions.sendKeys([67, 17])
-                },
             },
         }
         terminalCommands = function (command) {
@@ -375,10 +358,17 @@ function init() {
                 }
             },
             rescale: {
-                tooltip: "When the Window is moves the VM console will stretch to fill the availible space. Will cause distortion on VMs with smaller console Windows.",
+                tooltip: "When the Window is moved or ajusted the VM console will stretch to fill the availible space. Can cause distortion on VMs with smaller console Windows.",
                 action: (e) => {
                     this.toggles.rescale = e.target.checked
-                    this.actions.rescale(this.toggles.rescale)
+                    this.actions.rescale()
+                }
+            },
+            ajust_resolution: {
+                tooltip: "When the VM Console is resized the VM with ajust its resolution to match the new console side. Reccommened use with rescale.",
+                action: (e) => {
+                    this.toggles.resolution = e.target.checked
+                    this.actions.resolution()
                 }
             },
         }
@@ -386,31 +376,55 @@ function init() {
             closings: false,
             newline: true,
             rescale: false,
+            resolution: false,
         }
         elementEvents = {
-            droparea: {
-                dragover: (e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                },
-                drop: (e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-
-                    var selectedFile = e.originalEvent.dataTransfer.files[0]
-                    $('#fileInfo').text('Selected File: ' + selectedFile.name)
-
-                    // Read and display the text content of the dropped file
-                    var reader = new FileReader()
-                    reader.onload = function (e) {
-                        var contents = e.target.result
-                        var lines = contents.split('\n')
-                        HandleCommand({ type: 'InputStringMulti', arg: lines })
-                        toggleUploadOverlay()
-                    }
-                    reader.readAsText(selectedFile)
-                },
+            dragOver: (e) => {
+                e.preventDefault()
+                e.stopPropagation()
             },
+            mouseUp: function (event) {
+                this.direction = 'Released'
+                $('body').off('mouseup')
+                $('body').off('mousemove')
+            },
+            mouseMove: function (event) {
+                this._setDivPosition(event)
+            },
+            mouseDown: function (event) {
+                $('body').on('mouseup', this.elementEvents.mouseUp)
+                $('body').on('mousemove', this.elementEvents.mouseMove)
+            },
+            getFileContents: function (e) {
+                let contents = e.target.result
+                let lines = contents.split('\n')
+                this.actions.sendInputStringMulti(lines)
+                this.toggleUploadOverlay()
+            },
+            uploadFile: function (e) {
+                let file = $(this).prop('files')[0]
+                if (!file) {
+                    return
+                }
+
+                let reader = new FileReader()
+                reader.onload = getFileContents
+                reader.readAsText(selectedFile)
+
+                $(this).attr("value", "")
+            },
+            dragDrop: function (e) {
+                e.preventDefault()
+                e.stopPropagation()
+
+                let selectedFile = e.originalEvent.dataTransfer.files[0]
+
+                // Read and display the text content of the dropped file
+                let reader = new FileReader()
+                reader.onload = getFileContents
+                reader.readAsText(selectedFile)
+
+            }
         }
         actionHandlers = {
             cad: (wmks) => {
@@ -439,23 +453,27 @@ function init() {
                 $('#mainCanvas').css('margin', '0 auto')
             },
             rescale: (wmks, value) => {
-                wmks.setOption('rescale', value)
-                wmks.setOption('changeResolution', value)
-                wmks.setOption('useUnicodeKeyboardInput', true)
                 this.actions.resizeConsole()
+            },
+            resolution: (wmks, value) => {
+                wmks.updateScreen()
             },
             initConsole: (wmks) => {
                 return
             },
             resizeConsole: (wmks) => {
-                if (this.toggles.rescale) {
-                    function getMargin() {
-                        // get scale factor with regex, becasue jquery dosen't support 'scale' css property
-                        let scaleFactor = parseFloat($('#mainCanvas').css('transform').match(/matrix\((-?\d*\.?\d+),\s*0,\s*0,\s*(-?\d*\.?\d+),\s*0,\s*0\)/)[1])
-                        let mainCanvasWidth = $('#mainCanvas').width() * scaleFactor
-                        let screenWidth = $('#vmware-interface').width()
-                        return ((screenWidth - mainCanvasWidth) / 2)
-                    }
+                function getMargin() {
+                    // get scale factor with regex, becasue jquery dosen't support 'scale' css property
+
+                    if ($('#mainCanvas').css('transform') == 'none') return
+                    let scaleFactor = parseFloat($('#mainCanvas').css('transform').match(/matrix\((-?\d*\.?\d+),\s*0,\s*0,\s*(-?\d*\.?\d+),\s*0,\s*0\)/)[1])
+                    let mainCanvasWidth = $('#mainCanvas').width() * scaleFactor
+                    let screenWidth = $('#vmware-interface').width()
+                    return ((screenWidth - mainCanvasWidth) / 2)
+                }
+
+                if (this.toggles.rescale || this.toggles.resolution) {
+                    if ($('#mainCanvas').width() == window.innerWidth) return
                     $('#mainCanvas').css('margin-left', getMargin)
                     $('#mainCanvas').css('margin-right', getMargin)
                 } else {
@@ -475,7 +493,7 @@ function init() {
                         let wmks = WMKS.createWMKS("vmware-interface", {
                             useUnicodeKeyboardinput: true,
                             rescale: target.toggles.rescale,
-                            changeResolution: target.toggles.rescale,
+                            changeResolution: target.toggles.resolution,
                         })
                         return target.actionHandlers[`${prop}`].bind(target, wmks)
                     } else {
@@ -485,10 +503,6 @@ function init() {
                 }
             })
 
-            this.topCurrentHeight = 0
-            this.bottomCurrentHeight = 0
-            this.currentPosition = 0
-            this.newPosition = 0
             this.direction = 'Released'
             this.terminalHeight = $('#stdin').height()
 
@@ -501,7 +515,6 @@ function init() {
             this.actions.initConsole()
 
             this.terminalOptions.keymap.ENTER = this.terminalOptions.keymap.ENTER.bind(this)
-            this.terminalOptions.keymap["CTRL+C"] = this.terminalOptions.keymap["CTRL+C"].bind(this)
             let terminal = $('#stdin').terminal((command) => this.terminalCommands, {
                 ...this.terminalOptions
             })
@@ -521,7 +534,6 @@ function init() {
         }
         initHtml() {
             $(document.body).append(html)
-
         }
         initButtons() {
             for (let [key, value] of Object.entries(this.actionButtons)) {
@@ -537,107 +549,52 @@ function init() {
             }
         }
         initEvents() {
-            function mouseUp(event) {
-                this.direction = 'Released'
-                $('body').off('mouseup')
-                $('body').off('mousemove')
-            }
-            mouseUp = mouseUp.bind(this)
-
-            function mouseMove(event) {
-                this._setDivPosition(event)
-            }
-
-            mouseMove = mouseMove.bind(this)
-
-            function mouseDown(event) {
-                $('body').on('mouseup', mouseUp)
-                $('body').on('mousemove', mouseMove)
-            }
-
-            $('#divider').mousedown(mouseDown.bind(this))
-
-            $('#upload').click(this.toggleUploadOverlay)
-
-            function getFileContents(e) {
-                let contents = e.target.result
-                let lines = contents.split('\n')
-                this.actions.sendInputStringMulti(lines)
-                this.toggleUploadOverlay()
-            }
-
-            getFileContents = getFileContents.bind(this)
-
-            function uploadFile(e) {
-                let file = $(this).prop('files')[0]
-                if (!file) {
-                    return
-                }
-
-                let reader = new FileReader()
-                reader.onload = getFileContents
-                reader.readAsText(selectedFile)
-
-                $(this).attr("value", "")
-            }
-            $("#upload-file").on("change", uploadFile.bind(this))
-
-            // Prevent the default behavior of the drop event (opening the file in the browser)
-            function dragOver(event) {
-                event.preventDefault()
-                event.stopPropagation()
-            }
-            $('#dropArea').on('dragover', dragOver.bind(this))
-
-            // Drop file uploads
-            function dragDrop(e) {
-                e.preventDefault()
-                e.stopPropagation()
-
-                let selectedFile = e.originalEvent.dataTransfer.files[0]
-
-                // Read and display the text content of the dropped file
-                let reader = new FileReader()
-                reader.onload = getFileContents
-                reader.readAsText(selectedFile)
-
-            }
-            $('#dropArea').on('drop', dragDrop.bind(this))
-
-            $('#close-over').click(this.toggleUploadOverlay)
+            $.each(this.elementEvents, (key, value) => {
+                this.elementEvents[key] = this.elementEvents[key].bind(this)
+            })
+            // Triggers resizing the console and terminal panes
+            $('#divider').on('mousedown', this.elementEvents.mouseDown)
+            // Triggers showing the upload overlay
+            $('#upload').on('click', this.toggleUploadOverlay)
+            // Triggers hiding the upload overlay
+            $('#close-over').on('click', this.toggleUploadOverlay)
+            // Triggers uploading a file when a file sleected from the file selector
+            $("#upload-file").on("change", this.elementEvents.uploadFile)
+            // Only prevents the browser from trying to open files when they are dropped in the upload overlay
+            $('#dropArea').on('dragover', this.elementEvents.dragOver)
+            // Triggers uploading a file when a file is dropped in terminal
+            $('#terminal').on('drop', this.elementEvents.dragDrop)
+            // Triggers uploading a file when a file is dropped in the upload overlay
+            $('#dropArea').on('drop', this.elementEvents.dragDrop)
 
         }
         initTooltips(arg) {
             function makeTooltip(element) {
-                let tooltip = $(`<div class='tooltiptext'>${$(element).data('tooltip')}</div>`)
+                let tooltip = $(`<div class='tooltiptext d-none'>${$(element).data('tooltip')}</div>`)
                 $(element).append(tooltip)
                 $(tooltip).css('min-width', 150)
-                $(tooltip).css('max-width', 250)
+                $(tooltip).css('max-width', 350)
 
-                // calulate top position of tooltip
-                let top = -($(tooltip).height() + $(element).height())
+                $(element).on('mouseenter', function (e) {
 
-                // calculate left position of tooltip but make sure it doesn't go off the screen
-                let left = -($(tooltip).width() / 2) + 10
+                    $(tooltip).removeClass('d-none')
+                    $(tooltip).css('top', -($(tooltip).height()) - 10)
+                    let left = -($(tooltip).width() / 2)
 
-                // apply the css styles
-                $(tooltip).css('top', top)
-                $(tooltip).css('left', left)
+                    let rightMost = $(tooltip).offset().left + $(tooltip).width()
+                    if (rightMost > $(window).width()) {
+                        left = -((rightMost - $(window).width()) + (left * -1))
+                    }
+                    let leftMost = $(tooltip).offset().left
+                    if (leftMost < 0) {
+                        left = 0
+                    }
+                    $(tooltip).css('left', left)
+                })
 
-                // Account for padding on the tooltip
-                let padding = parseFloat($(tooltip).css('padding')) * 2
-
-                // check is the tooltip is going off the screen based on the left position
-                let rightMost = $(tooltip).offset().left + $(tooltip).width()
-                if (rightMost > $(window).width()) {
-                    let leftOffset = (rightMost + padding) - $(window).width()
-                    $(tooltip).css('left', left - leftOffset)
-                }
-                let leftMost = $(tooltip).offset().left
-                if (leftMost < 0) {
-                    let leftOffset = leftMost * -1
-                    $(tooltip).css('left', left + leftOffset)
-                }
+                $(element).on('mouseleave', function (e) {
+                    $(tooltip).addClass('d-none')
+                })
             }
             if (!arg) {
                 $('[data-tooltip]').each(function () {
@@ -704,7 +661,7 @@ function init() {
                 'gap': '5px',
             })
             let input = $(`<input id="${id}" type="checkbox" name="${id}">`)
-            let label = $(`<label id="${id}-checkbox-label" for="${id}">${id.charAt(0).toUpperCase() + id.slice(1)}</label>`)
+            let label = $(`<label id="${id}-checkbox-label" for="${id}">${(id.charAt(0).toUpperCase() + id.slice(1)).replace("_", " ")}</label>`)
             checkbox.append(input)
             checkbox.append(label)
             input.prop('checked', checked)
@@ -797,6 +754,7 @@ function init() {
 
 function wait() {
     if (window.location.href.includes('#/app/range/console/live-action/')) {
+        $.when($('#mainCanvas'))
         setTimeout(() => {
             var ele = $('#mainCanvas')
             if (ele) {

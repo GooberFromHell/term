@@ -2,6 +2,7 @@
 // @name         PCTE Term 4.0
 // @version      4.1
 // @updateURL    https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
+// @downloadURL  https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
 // @author       @LordGoober
 // @match        https://rcs00-portal.pcte.mil/
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         PCTE Term
-// @version      4.1.3
+// @version      4.1.2
 // @updateURL    https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
 // @downloadURL  https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
 // @author       @LordGoober
@@ -326,7 +326,7 @@ function init() {
             let height = $('.terminal-scroller').height()
             this.height(height)
             this.scroll_to_bottom()
-            return null
+            return ""
         }
         terminalOptions = {
             ...this.terminalKeymap,
@@ -341,13 +341,7 @@ function init() {
                 class: "icon-btn",
                 icon: "fa fa-terminal",
                 action: function () {
-                    // Windows
-                    this.actions.sendKeyCodes([WMKS.CONST.KB.KEY_CODE.META, 82])
-                    setTimeout(function () { $("#console").wmks('sendInputString', "cmd.exe /c \"start /max cmd /k mode con:cols=120 lines=2500\"\n") }, 200)
-
-                    // linux
-                    this.actions.sendKeyCodes([WMKS.CONST.KB.KEY_CODE.ALT, 113])
-                    setTimeout(function () { $("#console").wmks('sendInputString', "gnome-terminal --hide-menubar --window --maximize \n") }, 200)
+                    this.actions.openTerminal('linux')
                 },
             },
             cad: {
@@ -412,13 +406,13 @@ function init() {
                     this.toggles.newline = e.target.checked
                 }
             },
-            rescale: {
-                tooltip: "When the Window is moved or adjusted the VM console will stretch to fill the availible space. Can cause distortion on VMs with smaller console Windows.",
-                action: (e) => {
-                    this.toggles.rescale = e.target.checked
-                    this.actions.rescale()
-                }
-            },
+            // rescale: {
+            //     tooltip: "When the Window is moved or adjusted the VM console will stretch to fill the availible space. Can cause distortion on VMs with smaller console Windows.",
+            //     action: (e) => {
+            //         this.toggles.rescale = e.target.checked
+            //         this.actions.rescale()
+            //     }
+            // },
             adjust_resolution: {
                 tooltip: "When the VM Console is resized the VM with adjust its resolution to match the new console side. Reccommened use with rescale.",
                 action: (e) => {
@@ -465,7 +459,7 @@ function init() {
         toggles = {
             closings: false,
             newline: true,
-            rescale: false,
+            // rescale: false,
             adjust_resolution: true,
         }
         elementEvents = {
@@ -520,8 +514,26 @@ function init() {
             cad: (wmks) => {
                 wmks.CAD()
             },
-            sendKeyCodes: (wmks, keyCodes) => {
-                wmks.sendKeyCodes(keyCodes)
+            openTerminal(wmks, terminalType) {
+                switch (terminalType) {
+                    case "windows":
+                        // Windows
+                        setTimeout(function () {
+                            wmks.sendInputString("\u229E")
+                            wmks.sendInputString("cmd.exe /c \"start /max cmd /k mode con:cols=120 lines=2500\"\n")
+                        }, 200)
+                        break
+
+                    case "linux":
+                        // linux
+                        setTimeout(function () {
+                            wmks.sendInputString("\u229E")
+                            wmks.sendInputString("gnome-terminal --hide-menubar --window --maximize \n")
+                        }, 200)
+                        break
+
+                    default: break
+                }
             },
             sendInputString: (wmks, text) => {
                 wmks.sendInputString(text)
@@ -540,18 +552,17 @@ function init() {
                 wmks.isFullScreen() ? wmks.exitFullScreen() : wmks.enterFullScreen()
             },
             revertConsole: (wmks) => {
-                wmks.setOption('rescale', false)
+                // wmks.setOption('rescale', false)
                 wmks.setOption('changeResolution', false)
-                wmks.setOption('useUnicodeKeyboardInput', true)
+                wmks.setOption('useUnicodeKeyboardInput', false)
                 $('#mainCanvas').css('margin', '0 auto')
             },
-            rescale: (wmks, value) => {
+            // rescale: (wmks, value) => {
+            //     this.actions.resizeConsole()
+            //     wmks.updateScreen()
+            // },
+            resolution: (wmks) => {
                 this.actions.resizeConsole()
-                wmks.updateScreen()
-            },
-            resolution: (wmks, value) => {
-                this.actions.resizeConsole()
-                wmks.updateScreen()
             },
             resizeConsole: (wmks) => {
                 function getMargin() {
@@ -582,8 +593,9 @@ function init() {
                     console.log(`Prop called: ${prop} by line ${new Error().stack.split('\n')[2]}`)
                     if (prop in target.actionHandlers) {
                         let wmks = WMKS.createWMKS("vmware-interface", {
-                            useUnicodeKeyboardinput: true,
-                            rescale: target.toggles.rescale,
+                            useUnicodeKeyboardinput: false,
+                            // rescale: target.toggles.rescale,
+                            rescale: true,
                             changeResolution: target.toggles.adjust_resolution,
                         })
                         return target.actionHandlers[`${prop}`].bind(target, wmks)
@@ -712,6 +724,7 @@ function init() {
 
         initConsole() {
             this.actions.resizeConsole()
+            this.actions.register()
         }
 
         toggleUploadOverlay() {

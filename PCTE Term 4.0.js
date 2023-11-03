@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         PCTE Term 4.0
-// @version      4.1.2
+// @name         PCTE Term
+// @version      4.1.3
 // @updateURL    https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
 // @downloadURL  https://raw.githubusercontent.com/GooberFromHell/term/master/PCTE%20Term%204.0.js
 // @author       @LordGoober
@@ -44,27 +44,35 @@ label {
     right: 0;
     display: flex;
     flex-direction: column;
-    height: 100%;
     font-family: Hack, "Segoe UI" !important;
 }
-#rework-container #vmware-interface {
-    height: 85%;
+
+#rework-container > #vmware-interface {
+    position: fixed;
+    flex: 1 1 auto;
+    height: 80%;
+    width: 100%;
 }
+
 #terminal {
+    position: fixed;
+    bottom: 0;
     display: flex;
     flex-direction: column;
-    position: relative;
-    flex-grow: 1;
     background-color: #000;
+    flex: 1 1 auto;
+    width: 100%;
+
+    /* resizable */
+    height: 20%;
 }
 
 #nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-left: 5px;
-    padding-right: 5px;
-    padding-top: 2px;
+    padding: 8px;
+    background-color: #0a0a0a;
 }
 
 #term {
@@ -84,7 +92,8 @@ label {
 }
 
 #checkboxes,
-#action-btns {
+#action-btns,
+#selections {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -116,6 +125,20 @@ label {
 #checkboxes {
     margin-right: 15px;
 }
+#action-btns {
+    margin-left: auto;
+}
+
+#selections {
+    margin-left: 15px;
+}
+
+#selections > select {
+    min-width: 300px;
+    background-color: #262626;
+    border-radius: 3px;
+}
+
 
 #checkboxes input {
     border-radius: 5px;
@@ -138,7 +161,6 @@ label {
     display: flex;
     flex-direction: column;
     justify-content: end;
-    height: 99%;
     overflow-y: auto;
 }
 
@@ -169,7 +191,6 @@ a {
 
 .tooltip {
     position: relative;
-    border-bottom: 1px dotted black;
 }
 
 .tooltip .tooltiptext {
@@ -185,13 +206,20 @@ a {
     z-index: 1;
 }
 
-
-
-#divider {
+#divider2 {
     width: 100%;
+    cursor: none;
+    display: flex;
+    justify-content: center;\
+    padding-bottom: 5px;
+}
+
+#divider2 > span {
+    min-width: 50px;
+    min-height: 10px;
     cursor: row-resize;
-    min-height: 8px;
     background-color: #404040;
+    border-radius: 3px;
 }
 
 #new-button {
@@ -211,25 +239,38 @@ display: none !important;
 
 .d-grid {
 display: grid !important;
+}
 
+#log {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    color: white;
+    pointer-events: none;
+    height: 500px;
+    width: 400px;
+}
 `
-
 const html = `
+<div id='log'></div>
 <div id="rework-container">
-<div id="divider"></div>
-<div id=terminal>
-    <div id="nav">
-        <div id='checkboxes'>
+
+    <div id="terminal">
+    <div id="divider2" class="ui-resizable-handle ui-resizable-n"><span></span></div>
+        <div id="nav">
+            <div id='checkboxes'>
+            </div>
+            <div id="action-btns">
+            </div>
+            <div id="selections"></div>
+
         </div>
-        <span id='vmTitle'>${window.location.href.split('vmName=')[1]}</span>
-        <div id="action-btns">
+        <div id='term'>
+            <div id='stderr'></div>
+            <div id='stdin'></div>
         </div>
     </div>
-    <div id='term'>
-        <div id='stderr'></div>
-        <div id='stdin'></div>
-    </div>
-</div>
 </div>
 <div id="upload-overlay" class="d-none">
     <div id='dropArea' style="color:inherit;border:1px dashed rgba(211, 211, 211, 0.514);background-color:rgba(211, 211, 211, 0.233); padding: 5px;">
@@ -295,6 +336,20 @@ function init() {
             prompt: this.terminalPrompts.default,
         }
         actionButtons = {
+            open_terminal: {
+                tooltip: "Open Terminal",
+                class: "icon-btn",
+                icon: "fa fa-terminal",
+                action: function () {
+                    // Windows
+                    this.actions.sendKeyCodes([WMKS.CONST.KB.KEY_CODE.META, 82])
+                    setTimeout(function () { $("#console").wmks('sendInputString', "cmd.exe /c \"start /max cmd /k mode con:cols=120 lines=2500\"\n") }, 200)
+
+                    // linux
+                    this.actions.sendKeyCodes([WMKS.CONST.KB.KEY_CODE.ALT, 113])
+                    setTimeout(function () { $("#console").wmks('sendInputString', "gnome-terminal --hide-menubar --window --maximize \n") }, 200)
+                },
+            },
             cad: {
                 tooltip: "Send Ctrl + Alt + Del to the VM.",
                 class: "icon-btn",
@@ -358,17 +413,52 @@ function init() {
                 }
             },
             rescale: {
-                tooltip: "When the Window is moved or ajusted the VM console will stretch to fill the availible space. Can cause distortion on VMs with smaller console Windows.",
+                tooltip: "When the Window is moved or adjusted the VM console will stretch to fill the availible space. Can cause distortion on VMs with smaller console Windows.",
                 action: (e) => {
                     this.toggles.rescale = e.target.checked
                     this.actions.rescale()
                 }
             },
-            ajust_resolution: {
-                tooltip: "When the VM Console is resized the VM with ajust its resolution to match the new console side. Reccommened use with rescale.",
+            adjust_resolution: {
+                tooltip: "When the VM Console is resized the VM with adjust its resolution to match the new console side. Reccommened use with rescale.",
                 action: (e) => {
-                    this.toggles.resolution = e.target.checked
+                    this.toggles.adjust_resolution = e.target.checked
                     this.actions.resolution()
+                }
+            },
+        }
+        selections = {
+            vm: {
+                tooltip: "Select VM to connect to.",
+                preload: (e) => {
+                    // Get list of VMs for connected range
+                    let host = window.location.host
+                    let id = window.location.href.split("/")[8]
+                    $.get(`https://${host}/api/range-server/events/${id}/range-info/vm-names-consoles`)
+                        .then((data) => {
+                            $.each(data.vms, (idx, value) => {
+                                let option = $(`<option key=${value.key.index} data-repetitionGroup="${value.key.repetitionGroup}" value="${value.val}">${value.val}</option>`)
+                                window.location.href.split("vmName=")[1] == value.val ? option.prop('selected', true) : null
+                                $('#vm-select').append(option)
+                            })
+
+                        })
+                },
+                selection: (e) => {
+                    $('#vmware-interface').remove()
+                    let host = window.location.host
+                    let urlParts = window.location.href.split("/")
+                    let selected = $(e.currentTarget).find(':selected')
+                    let key = selected.attr('key')
+                    let repetitionGroup = selected.attr('data-repetitionGroup')
+                    let vmName = selected.val()
+                    let connectUrl = `https://${host}/#/app/range/console/live-action/${urlParts[8]}/${urlParts[9]}/${repetitionGroup}/${key}?vmName=${vmName}`
+                    window.location.href = connectUrl
+                    // create mutation observer to watch foir #vmware-interface to be added to the DOM
+                    setTimeout(() => {
+                        $('#vmware-interface').prependTo('#rework-container')
+                    }, 1000)
+
                 }
             },
         }
@@ -376,7 +466,7 @@ function init() {
             closings: false,
             newline: true,
             rescale: false,
-            resolution: false,
+            adjust_resolution: true,
         }
         elementEvents = {
             dragOver: (e) => {
@@ -430,6 +520,9 @@ function init() {
             cad: (wmks) => {
                 wmks.CAD()
             },
+            sendKeyCodes: (wmks, keyCodes) => {
+                wmks.sendKeyCodes(keyCodes)
+            },
             sendInputString: (wmks, text) => {
                 wmks.sendInputString(text)
             },
@@ -454,12 +547,11 @@ function init() {
             },
             rescale: (wmks, value) => {
                 this.actions.resizeConsole()
-            },
-            resolution: (wmks, value) => {
                 wmks.updateScreen()
             },
-            initConsole: (wmks) => {
-                return
+            resolution: (wmks, value) => {
+                this.actions.resizeConsole()
+                wmks.updateScreen()
             },
             resizeConsole: (wmks) => {
                 function getMargin() {
@@ -472,8 +564,7 @@ function init() {
                     return ((screenWidth - mainCanvasWidth) / 2)
                 }
 
-                if (this.toggles.rescale || this.toggles.resolution) {
-                    if ($('#mainCanvas').width() == window.innerWidth) return
+                if (!this.toggles.adjust_resolution) {
                     $('#mainCanvas').css('margin-left', getMargin)
                     $('#mainCanvas').css('margin-right', getMargin)
                 } else {
@@ -493,7 +584,7 @@ function init() {
                         let wmks = WMKS.createWMKS("vmware-interface", {
                             useUnicodeKeyboardinput: true,
                             rescale: target.toggles.rescale,
-                            changeResolution: target.toggles.resolution,
+                            changeResolution: target.toggles.adjust_resolution,
                         })
                         return target.actionHandlers[`${prop}`].bind(target, wmks)
                     } else {
@@ -510,9 +601,9 @@ function init() {
             this.initHtml()
             this.initButtons()
             this.initCheckboxes()
+            this.initSelections()
             this.initTooltips()
             this.initEvents()
-            this.actions.initConsole()
 
             this.terminalOptions.keymap.ENTER = this.terminalOptions.keymap.ENTER.bind(this)
             let terminal = $('#stdin').terminal((command) => this.terminalCommands, {
@@ -526,9 +617,11 @@ function init() {
         initStyle() {
             let jqterminal_css = GM_getResourceText('jqterminal_css')
             let fontawesome_css = GM_getResourceText('fontawesome_css')
+            let jquery_ui_css = GM_getResourceText('jquery_ui_css')
             let hack_font = GM_getResourceText('hack_font')
             GM_addStyle(jqterminal_css)
             GM_addStyle(fontawesome_css)
+            GM_addStyle(jquery_ui_css)
             GM_addStyle(hack_font)
             GM_addStyle(style)
         }
@@ -547,6 +640,17 @@ function init() {
                 let checkbox = this._createCheckbox({ id: key, tooltip: value.tooltip, icon: value.icon, action: value.action, checked: this.toggles[`${key}`] })
                 $('#checkboxes').append(checkbox)
             }
+        }
+        initSelections() {
+            for (let [key, value] of Object.entries(this.selections)) {
+                value.preload = value.preload.bind(this)
+                value.selection = value.selection.bind(this)
+                let selection = $(`<select id="${key}-select" data-tooltip="${value.tooltip} icon='${value.icon}"></select>`)
+                value.preload()
+                selection.on('change', value.selection)
+                $('#selections').append(selection)
+            }
+
         }
         initEvents() {
             $.each(this.elementEvents, (key, value) => {
@@ -606,16 +710,24 @@ function init() {
             }
         }
 
+        initConsole() {
+            this.actions.resizeConsole()
+        }
+
         toggleUploadOverlay() {
             $('#upload-overlay').toggleClass("d-grid")
         }
         toggleInterface() {
-            let toggle = $("#content-wrapper").hasClass("d-none")
+            let toggle = $("#content-wrapper").hasClass('d-none')
             toggle ? this._showOldInterface() : this._showNewInterface()
         }
+        log(text) {
+            if (typeof text == 'object') {
+                text = JSON.stringify(text)
+            }
+            $('#log').text(text)
+        }
         _showOldInterface() {
-            // hide old container
-            $('#content-wrapper').removeClass('d-none')
 
             // replace #vmware-interface to .interface
             $('#vmware-interface').appendTo($('.interface').children().first())
@@ -625,6 +737,9 @@ function init() {
 
             $('#content-wrapper').append(newInterfaceBtn)
 
+            // show old container
+            $('#content-wrapper').removeClass('d-none')
+
             // hide #rework-container
             $('#rework-container').addClass('d-none')
 
@@ -632,10 +747,9 @@ function init() {
             this.actions.revertConsole()
         }
         _showNewInterface() {
-            $('#content-wrapper').addClass('d-none')
 
             // move vmware console to new interface before the divider
-            $('#vmware-interface').insertBefore('#divider')
+            $('#vmware-interface').prependTo('#rework-container')
 
             // remove button to revert back to new interface in the top right corner
             $('#new-button').remove()
@@ -643,8 +757,38 @@ function init() {
             // show new interface container
             $('#rework-container').removeClass('d-none')
 
+            // hide old container
+            $('#content-wrapper').addClass('d-none')
+
+            function logData(text) {
+                this.log(text)
+            }
+
+            function adjustScreen() {
+                this.actions.resizeConsole()
+            }
+
+            logData = logData.bind(this)
+            adjustScreen = adjustScreen.bind(this)
+
+            $("#terminal").resizable({
+                handles: {
+                    n: "#divider2",
+                },
+                ghost: true,
+                resize: function (event, ui) {
+                    $('#mainCanvas').height(ui.position.top)
+                    $('#vmware-interface').height(event.pageY)
+                    logData({ ...ui.position, ...ui.size })
+                    adjustScreen()
+                },
+                minHeight: $('#nav').outerHeight()
+            })
+
+            $(".selector").on("resizestart", function (event, ui) { })
+
             // resize vmware console to fill the screen
-            this.actions.resizeConsole()
+            $('#adjust_resolution').prop('checked', this.toggles.adjust_resolution)
         }
         _createButton({ id, tooltip, btnClass, icon, action }) {
             let button = $(`<button id='${id}-button' data-tooltip='${tooltip}' class='${btnClass}'><i class='${icon}'></i></button>`)
@@ -669,6 +813,11 @@ function init() {
             input.click(action)
 
             return checkbox
+        }
+
+        _createOption({ name }) {
+            let option = $(`<option id="${name}" name="${name}">${name}</option>`)
+            return option
         }
         _setDivPosition(mouse) {
             let pageHeight = $(window).height()
@@ -749,8 +898,20 @@ function init() {
     }
 
     let newPCTETerminal = new PCTETerminal()
-    GM_setValue('terminal', terminal)
+
 }
+
+$.fn.extend({
+    toggleHtml: function () {
+        if (this.data('html') == undefined) {
+            this.data('html', this.html())
+            this.html('')
+        } else {
+            this.html(this.data('html'))
+            this.data('html', undefined)
+        }
+    },
+})
 
 function wait() {
     if (window.location.href.includes('#/app/range/console/live-action/')) {
@@ -762,7 +923,7 @@ function wait() {
             } else {
                 wait()
             }
-        }, 500)
+        }, 1500)
     }
 }
 
